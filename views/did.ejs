@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Video Call Example</title>
+</head>
+
+<body>
+    <h1>Video Call</h1>
+    <div>
+        <video id="localVideo" autoplay muted></video>
+        <video id="remoteVideo" autoplay></video>
+    </div>
+    <button id="startButton">Start Call</button>
+    <button id="stopButton" disabled>End Call</button>
+
+    <script>
+        let localStream;
+        let remoteStream;
+        let pc1;
+        let pc2;
+
+        const localVideo = document.getElementById('localVideo');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        async function startCall() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localVideo.srcObject = stream;
+            localStream = stream;
+
+            const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+            pc1 = new RTCPeerConnection(configuration);
+            pc2 = new RTCPeerConnection(configuration);
+
+            pc1.onicecandidate = (event) => {
+                if (event.candidate) {
+                    pc2.addIceCandidate(event.candidate);
+                }
+            };
+            pc2.onicecandidate = (event) => {
+                if (event.candidate) {
+                    pc1.addIceCandidate(event.candidate);
+                }
+            };
+
+            pc2.ontrack = (event) => {
+                remoteVideo.srcObject = event.streams[0];
+                remoteStream = event.streams[0];
+            };
+            localStream.getTracks().forEach((track) => pc1.addTrack(track, localStream));
+            const offer = await pc1.createOffer();
+            await pc1.setLocalDescription(offer);
+            await pc2.setRemoteDescription(offer);
+
+            const answer = await pc2.createAnswer();
+            await pc2.setLocalDescription(answer);
+            await pc1.setRemoteDescription(answer);
+
+            startButton.disabled = true;
+            stopButton.disabled = false;
+        }
+
+        function stopCall() {
+            localStream.getTracks().forEach((track) => track.stop());
+            localVideo.srcObject = null;
+            remoteVideo.srcObject = null;
+            pc1.close();
+            pc2.close();
+            startButton.disabled = false;
+            stopButton.disabled = true;
+        }
+
+        startButton.addEventListener('click', startCall);
+        stopButton.addEventListener('click', stopCall);
+    </script>
+</body>
+</html>
