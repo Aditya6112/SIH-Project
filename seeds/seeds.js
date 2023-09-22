@@ -21,7 +21,7 @@ const studentDetails = [
     field: 'JEE'
 },
 {
-    name: 'Vishakha',
+    name: 'Aditya',
     standard: '10th',
     field: 'NEET'
 }
